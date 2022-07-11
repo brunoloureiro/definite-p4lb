@@ -176,7 +176,12 @@ control MyIngress(inout headers hdr,
 	register<bit<48>>(MAX_PORTS) bytes_per_port;
 	register<bit<48>>(MAX_PORTS) packets_per_port;
 
+	action drop(){
+		mark_to_drop(standard_metadata);
+	}
+
 	action ipv4_forward(bit<48> nhop_dmac, bit<9> port) {
+		hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = nhop_dmac;
         standard_metadata.egress_spec = port;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
@@ -195,106 +200,110 @@ control MyIngress(inout headers hdr,
         size = 128; //increase this later
     }
 
-	action pull_byte_registers(bit<9> i){
+	action pull_byte_registers(bit<32> i){
 		bit<48> val;
 
+		hdr.controller_response.setValid();
+
 		bytes_per_port.read(val, i+0);
-		bytes_per_port.write(i+0, bit<48> 0);
+		bytes_per_port.write(i+0, (bit<48>) 0);
 		hdr.controller_response.val0 = val;
 
 		bytes_per_port.read(val, i+1);
-		bytes_per_port.write(i+1, bit<48> 0);
+		bytes_per_port.write(i+1, (bit<48>) 0);
 		hdr.controller_response.val1 = val;
 
 		bytes_per_port.read(val, i+2);
-		bytes_per_port.write(i+2, bit<48> 0);
+		bytes_per_port.write(i+2, (bit<48>) 0);
 		hdr.controller_response.val2 = val;
 
 		bytes_per_port.read(val, i+3);
-		bytes_per_port.write(i+3, bit<48> 0);
+		bytes_per_port.write(i+3, (bit<48>) 0);
 		hdr.controller_response.val3 = val;
 
 		bytes_per_port.read(val, i+4);
-		bytes_per_port.write(i+4, bit<48> 0);
+		bytes_per_port.write(i+4, (bit<48>) 0);
 		hdr.controller_response.val4 = val;
 
 		bytes_per_port.read(val, i+5);
-		bytes_per_port.write(i+5, bit<48> 0);
+		bytes_per_port.write(i+5, (bit<48>) 0);
 		hdr.controller_response.val5 = val;
 
 		bytes_per_port.read(val, i+6);
-		bytes_per_port.write(i+6, bit<48> 0);
+		bytes_per_port.write(i+6, (bit<48>) 0);
 		hdr.controller_response.val6 = val;
 
 		bytes_per_port.read(val, i+7);
-		bytes_per_port.write(i+7, bit<48> 0);
+		bytes_per_port.write(i+7, (bit<48>) 0);
 		hdr.controller_response.val7 = val;
 
 		bytes_per_port.read(val, i+8);
-		bytes_per_port.write(i+8, bit<48> 0);
+		bytes_per_port.write(i+8, (bit<48>) 0);
 		hdr.controller_response.val8 = val;
 
 		bytes_per_port.read(val, i+9);
-		bytes_per_port.write(i+9, bit<48> 0);
+		bytes_per_port.write(i+9, (bit<48>) 0);
 		hdr.controller_response.val9 = val;
 
 		hdr.controller_response.response_code = controller_response_code_t.PULL_OK;
 	}
 
-	action pull_packet_registers(bit<9> i){
+	action pull_packet_registers(bit<32> i){
 		bit<48> val;
 
+		hdr.controller_response.setValid();
+
 		packets_per_port.read(val, i+0);
-		packets_per_port.write(i+0, bit<48> 0);
+		packets_per_port.write(i+0, (bit<48>) 0);
 		hdr.controller_response.val0 = val;
 
 		packets_per_port.read(val, i+1);
-		packets_per_port.write(i+1, bit<48> 0);
+		packets_per_port.write(i+1, (bit<48>) 0);
 		hdr.controller_response.val1 = val;
 
 		packets_per_port.read(val, i+2);
-		packets_per_port.write(i+2, bit<48> 0);
+		packets_per_port.write(i+2, (bit<48>) 0);
 		hdr.controller_response.val2 = val;
 
 		packets_per_port.read(val, i+3);
-		packets_per_port.write(i+3, bit<48> 0);
+		packets_per_port.write(i+3, (bit<48>) 0);
 		hdr.controller_response.val3 = val;
 
 		packets_per_port.read(val, i+4);
-		packets_per_port.write(i+4, bit<48> 0);
+		packets_per_port.write(i+4, (bit<48>) 0);
 		hdr.controller_response.val4 = val;
 
 		packets_per_port.read(val, i+5);
-		packets_per_port.write(i+5, bit<48> 0);
+		packets_per_port.write(i+5, (bit<48>) 0);
 		hdr.controller_response.val5 = val;
 
 		packets_per_port.read(val, i+6);
-		packets_per_port.write(i+6, bit<48> 0);
+		packets_per_port.write(i+6, (bit<48>) 0);
 		hdr.controller_response.val6 = val;
 
 		packets_per_port.read(val, i+7);
-		packets_per_port.write(i+7, bit<48> 0);
+		packets_per_port.write(i+7, (bit<48>) 0);
 		hdr.controller_response.val7 = val;
 
 		packets_per_port.read(val, i+8);
-		packets_per_port.write(i+8, bit<48> 0);
+		packets_per_port.write(i+8, (bit<48>) 0);
 		hdr.controller_response.val8 = val;
 
 		packets_per_port.read(val, i+9);
-		packets_per_port.write(i+9, bit<48> 0);
+		packets_per_port.write(i+9, (bit<48>) 0);
 		hdr.controller_response.val9 = val;
 
 		hdr.controller_response.response_code = controller_response_code_t.PULL_OK;
 	}
 
-	action increment_byte_register(bit<9> i){
+	action increment_byte_register(bit<32> i){
 		bit<48> val;
 		bytes_per_port.read(val, i);
 		val = val + (bit<48>)standard_metadata.packet_length;
 		bytes_per_port.write(i, val);
 	}
 
-	action increment_packet_register(bit<9> i){
+	action increment_packet_register(bit<32> i){
 		bit<48> val;
 		packets_per_port.read(val, i);
 		val = val + (bit<48>) 1;
@@ -308,21 +317,21 @@ control MyIngress(inout headers hdr,
 					log_msg("Received request from controller with code NO_OP");
 				}
 				controller_op_code_t.PULL_BYTES: {
-					log_msg("Received request from controller with code PULL_BYTES, index {}", {hdr.controller_request.idx})
-					pull_byte_registers(hdr.controller_request.idx);
+					log_msg("Received request from controller with code PULL_BYTES, index {}", {hdr.controller_request.idx});
+					pull_byte_registers((bit<32>) hdr.controller_request.idx);
 				}
 				controller_op_code_t.PULL_PACKETS: {
-					log_msg("Received request from controller with code PULL_PACKETS, index {}", {hdr.controller_request.idx})
-					pull_packet_registers(hdr.controller_request.idx);
+					log_msg("Received request from controller with code PULL_PACKETS, index {}", {hdr.controller_request.idx});
+					pull_packet_registers((bit<32>) hdr.controller_request.idx);
 				}
 			}
 		}
 		else if (hdr.ipv4.isValid()){
 			//forwarding
 			ecmp_group.apply();
-			
-			increment_byte_register(standard_metadata.egress_spec);
-			increment_packet_register(standard_metadata.egress_spec);
+
+			increment_byte_register((bit<32>) standard_metadata.egress_spec);
+			increment_packet_register((bit<32>) standard_metadata.egress_spec);
 		}
 	}
 
@@ -335,6 +344,8 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
+
+	apply{}
 
 }
 
