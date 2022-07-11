@@ -183,7 +183,19 @@ control MyIngress(inout headers hdr,
         meta.use_ecmp = 0;
     }
 
-	action pull_byte_registers(bit<16> i){
+    table ecmp_group {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            drop;
+            ipv4_forward;
+            //set_ecmp_select;
+        }
+        size = 128; //increase this later
+    }
+
+	action pull_byte_registers(bit<9> i){
 		bit<48> val;
 
 		bytes_per_port.read(val, i+0);
@@ -229,7 +241,7 @@ control MyIngress(inout headers hdr,
 		hdr.controller_response.response_code = controller_response_code_t.PULL_OK;
 	}
 
-	action pull_packet_registers(bit<16> i){
+	action pull_packet_registers(bit<9> i){
 		bit<48> val;
 
 		packets_per_port.read(val, i+0);
@@ -275,6 +287,20 @@ control MyIngress(inout headers hdr,
 		hdr.controller_response.response_code = controller_response_code_t.PULL_OK;
 	}
 
+	action increment_byte_register(bit<9> i){
+		bit<48> val;
+		bytes_per_port.read(val, i);
+		val = val + (bit<48>)standard_metadata.packet_length;
+		bytes_per_port.write(i, val);
+	}
+
+	action increment_packet_register(bit<9> i){
+		bit<48> val;
+		packets_per_port.read(val, i);
+		val = val + (bit<48>) 1;
+		packets_per_port.write(i, val);
+	}
+
 	apply{
 		if (hdr.controller_request.isValid()){
 			switch (hdr.controller_request.op){
@@ -292,7 +318,11 @@ control MyIngress(inout headers hdr,
 			}
 		}
 		else if (hdr.ipv4.isValid()){
-
+			//forwarding
+			ecmp_group.apply();
+			
+			increment_byte_register(standard_metadata.egress_spec);
+			increment_packet_register(standard_metadata.egress_spec);
 		}
 	}
 
