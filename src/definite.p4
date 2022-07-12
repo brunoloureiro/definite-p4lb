@@ -3,7 +3,8 @@
 #include <v1model.p4>
 
 const bit<16> TYPE_IPV4 = 0x800;
-const bit<16> TYPE_CONTROLLER_REQUEST = 0x1234;
+const bit<16> TYPE_CONTROLLER_REQUEST = 0x1212;
+const bit<16> TYPE_CONTROLLER_REPLY = 0x1213;
 const bit<8> PROTO_TCP = 0x06;
 const bit<8> PROTO_UDP = 0x11;
 
@@ -18,8 +19,8 @@ enum bit<8> controller_op_code_t {
     PULL_PACKETS = 3
 }
 
-enum bit<8> controller_response_code_t {
-    NO_RESPONSE = 0,
+enum bit<8> controller_reply_code_t {
+    NO_REPLY = 0,
     PULL_OK     = 1
 }
 
@@ -80,7 +81,7 @@ header controller_request_t{
 	bit<48> val9;
 }
 
-header controller_response_t{
+header controller_reply_t{
 	controller_op_code_t op;
 	bit<16> idx;
 	bit<48> val0;
@@ -93,7 +94,7 @@ header controller_response_t{
 	bit<48> val7;
 	bit<48> val8;
 	bit<48> val9;
-	controller_response_code_t response_code;
+	controller_reply_code_t reply_code;
 }
 
 struct metadata {
@@ -107,7 +108,7 @@ struct headers {
     tcp_t      tcp;
     udp_t      udp;
     controller_request_t controller_request;
-    controller_response_t controller_response;
+    controller_reply_t controller_reply;
 }
 
 /*************************************************************************
@@ -203,97 +204,97 @@ control MyIngress(inout headers hdr,
 	action pull_byte_registers(bit<32> i){
 		bit<48> val;
 
-		hdr.controller_response.setValid();
+		hdr.controller_reply.setValid();
 
 		bytes_per_port.read(val, i+0);
 		bytes_per_port.write(i+0, (bit<48>) 0);
-		hdr.controller_response.val0 = val;
+		hdr.controller_reply.val0 = val;
 
 		bytes_per_port.read(val, i+1);
 		bytes_per_port.write(i+1, (bit<48>) 0);
-		hdr.controller_response.val1 = val;
+		hdr.controller_reply.val1 = val;
 
 		bytes_per_port.read(val, i+2);
 		bytes_per_port.write(i+2, (bit<48>) 0);
-		hdr.controller_response.val2 = val;
+		hdr.controller_reply.val2 = val;
 
 		bytes_per_port.read(val, i+3);
 		bytes_per_port.write(i+3, (bit<48>) 0);
-		hdr.controller_response.val3 = val;
+		hdr.controller_reply.val3 = val;
 
 		bytes_per_port.read(val, i+4);
 		bytes_per_port.write(i+4, (bit<48>) 0);
-		hdr.controller_response.val4 = val;
+		hdr.controller_reply.val4 = val;
 
 		bytes_per_port.read(val, i+5);
 		bytes_per_port.write(i+5, (bit<48>) 0);
-		hdr.controller_response.val5 = val;
+		hdr.controller_reply.val5 = val;
 
 		bytes_per_port.read(val, i+6);
 		bytes_per_port.write(i+6, (bit<48>) 0);
-		hdr.controller_response.val6 = val;
+		hdr.controller_reply.val6 = val;
 
 		bytes_per_port.read(val, i+7);
 		bytes_per_port.write(i+7, (bit<48>) 0);
-		hdr.controller_response.val7 = val;
+		hdr.controller_reply.val7 = val;
 
 		bytes_per_port.read(val, i+8);
 		bytes_per_port.write(i+8, (bit<48>) 0);
-		hdr.controller_response.val8 = val;
+		hdr.controller_reply.val8 = val;
 
 		bytes_per_port.read(val, i+9);
 		bytes_per_port.write(i+9, (bit<48>) 0);
-		hdr.controller_response.val9 = val;
+		hdr.controller_reply.val9 = val;
 
-		hdr.controller_response.response_code = controller_response_code_t.PULL_OK;
+		hdr.controller_reply.reply_code = controller_reply_code_t.PULL_OK;
 	}
 
 	action pull_packet_registers(bit<32> i){
 		bit<48> val;
 
-		hdr.controller_response.setValid();
+		hdr.controller_reply.setValid();
 
 		packets_per_port.read(val, i+0);
 		packets_per_port.write(i+0, (bit<48>) 0);
-		hdr.controller_response.val0 = val;
+		hdr.controller_reply.val0 = val;
 
 		packets_per_port.read(val, i+1);
 		packets_per_port.write(i+1, (bit<48>) 0);
-		hdr.controller_response.val1 = val;
+		hdr.controller_reply.val1 = val;
 
 		packets_per_port.read(val, i+2);
 		packets_per_port.write(i+2, (bit<48>) 0);
-		hdr.controller_response.val2 = val;
+		hdr.controller_reply.val2 = val;
 
 		packets_per_port.read(val, i+3);
 		packets_per_port.write(i+3, (bit<48>) 0);
-		hdr.controller_response.val3 = val;
+		hdr.controller_reply.val3 = val;
 
 		packets_per_port.read(val, i+4);
 		packets_per_port.write(i+4, (bit<48>) 0);
-		hdr.controller_response.val4 = val;
+		hdr.controller_reply.val4 = val;
 
 		packets_per_port.read(val, i+5);
 		packets_per_port.write(i+5, (bit<48>) 0);
-		hdr.controller_response.val5 = val;
+		hdr.controller_reply.val5 = val;
 
 		packets_per_port.read(val, i+6);
 		packets_per_port.write(i+6, (bit<48>) 0);
-		hdr.controller_response.val6 = val;
+		hdr.controller_reply.val6 = val;
 
 		packets_per_port.read(val, i+7);
 		packets_per_port.write(i+7, (bit<48>) 0);
-		hdr.controller_response.val7 = val;
+		hdr.controller_reply.val7 = val;
 
 		packets_per_port.read(val, i+8);
 		packets_per_port.write(i+8, (bit<48>) 0);
-		hdr.controller_response.val8 = val;
+		hdr.controller_reply.val8 = val;
 
 		packets_per_port.read(val, i+9);
 		packets_per_port.write(i+9, (bit<48>) 0);
-		hdr.controller_response.val9 = val;
+		hdr.controller_reply.val9 = val;
 
-		hdr.controller_response.response_code = controller_response_code_t.PULL_OK;
+		hdr.controller_reply.reply_code = controller_reply_code_t.PULL_OK;
 	}
 
 	action increment_byte_register(bit<32> i){
@@ -314,6 +315,8 @@ control MyIngress(inout headers hdr,
 		if (hdr.controller_request.isValid()){
 			switch (hdr.controller_request.op){
 				controller_op_code_t.NO_OP: {
+					hdr.controller_reply.setValid();
+					hdr.controller_reply.reply_code = controller_reply_code_t.NO_REPLY;
 					log_msg("Received request from controller with code NO_OP");
 				}
 				controller_op_code_t.PULL_BYTES: {
@@ -325,6 +328,8 @@ control MyIngress(inout headers hdr,
 					pull_packet_registers((bit<32>) hdr.controller_request.idx);
 				}
 			}
+			hdr.ethernet.etherType = TYPE_CONTROLLER_REPLY;
+			hdr.controller_request.setInvalid();
 		}
 		else if (hdr.ipv4.isValid()){
 			//forwarding
@@ -380,7 +385,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
-        packet.emit(hdr.controller_response);
+        packet.emit(hdr.controller_reply);
         packet.emit(hdr.ipv4);
 		packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
