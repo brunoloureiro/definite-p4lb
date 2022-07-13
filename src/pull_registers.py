@@ -84,10 +84,13 @@ class ReplyThread (threading.Thread):
         self.iface = iface
 
     def run(self):
-        sniff(lfilter = filter_reply, count=1, iface = self.iface,
+        sniff_replies(iface=self.iface)
+
+
+def sniff_replies(iface):
+    sniff(lfilter = filter_reply, count=2, iface=iface,
           prn = lambda x: handle_pkt(x))
           #, stop_filter=filter_reply)
-
 
 def handle_pkt(pkt):
     print("got a packet")
@@ -113,12 +116,16 @@ def main():
 
     reply_thread = ReplyThread(thread_id=0, iface=iface)
     reply_thread.start()
-    
+
     print("sending on interface %s to pull bytes from port %s" % (iface, str(req_port)))
     pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
     #pkt = pkt /IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / sys.argv[2]
     pkt = pkt / ControllerRequest(op=ControllerRequest.op.s2i['PULL_BYTES'], idx=req_port)
     pkt.show2()
+    sendp(pkt, iface=iface, verbose=False)
+
+    pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
+    pkt = pkt / ControllerRequest(op=ControllerRequest.op.s2i['PULL_PACKETS'], idx=req_port)
     sendp(pkt, iface=iface, verbose=False)
     
 
