@@ -2,6 +2,7 @@
 import random
 import socket
 import sys, os, struct
+import threading, time
 
 from scapy.all import IP, TCP, UDP, Raw, Ether, get_if_hwaddr, get_if_list, sendp
 from scapy.all import sniff, hexdump, bind_layers
@@ -73,24 +74,53 @@ class ControllerReply(Packet):
         return self.sprintf("op=%ControllerReply.op.i2s[op]%, idx=%idx%, vals..., reply code=%ControllerReply.reply_code.i2s[reply_code]%")
 
 bind_layers(Ether, ControllerRequest, type=TYPE_REQ)
-bind_layers(Ether, ControllerRequest, type=TYPE_REPLY)
+bind_layers(Ether, ControllerReply, type=TYPE_REPLY)
 #bind_layers(ControllerRequest, IP)
+
+class ReplyThread (threading.Thread):
+    def __init__(self, thread_id, iface):
+        threading.Thread.__init__(self)
+        self.thread_id = thread_id
+        self.iface = iface
+
+    def run(self):
+        sniff(lfilter = filter_reply, count=1, iface = self.iface,
+          prn = lambda x: handle_pkt(x))
+          #, stop_filter=filter_reply)
+
+
+def handle_pkt(pkt):
+    print("got a packet")
+    pkt.show2()
+#    hexdump(pkt)
+    sys.stdout.flush()
+
+def filter_reply(pkt):
+    if pkt[Ether].type == TYPE_REPLY:
+        return True
+    else:
+        return False
 
 def main():
     if len(sys.argv) < 2:
-        print('pass the following argument: <port_number>')
+        print('pass the following argument: <idx>')
+        print('Note: to pull the first 10 registers (ports 0..9), pass idx = 0, to pull ports 10..19 pass idx = 1, and so on.')
         exit(1)
 
     req_port = int(sys.argv[1])
     #addr = socket.gethostbyname(sys.argv[1])
     iface = get_if()
 
+    reply_thread = ReplyThread(thread_id=0, iface=iface)
+    reply_thread.start()
+    
     print("sending on interface %s to pull bytes from port %s" % (iface, str(req_port)))
     pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
     #pkt = pkt /IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / sys.argv[2]
     pkt = pkt / ControllerRequest(op=ControllerRequest.op.s2i['PULL_BYTES'], idx=req_port)
     pkt.show2()
-    #sendp(pkt, iface=iface, verbose=False)
+    sendp(pkt, iface=iface, verbose=False)
+    
 
 if __name__ == '__main__':
     main()

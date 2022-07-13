@@ -329,6 +329,20 @@ control MyIngress(inout headers hdr,
 				}
 			}
 			hdr.ethernet.etherType = TYPE_CONTROLLER_REPLY;
+
+			hdr.controller_reply.op = hdr.controller_request.op;
+
+			bit<48> temp_addr;
+
+			temp_addr = hdr.ethernet.srcAddr;
+			hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+			hdr.ethernet.dstAddr = temp_addr;
+
+			//TO-DO: implement topology-oblivious (more than one switch) forwarding?
+			//maybe not needed if we assume each switch has a direct physical link with the control plane (probably a realistic assumption)
+
+			standard_metadata.egress_spec = standard_metadata.ingress_port;
+
 			hdr.controller_request.setInvalid();
 		}
 		else if (hdr.ipv4.isValid()){
