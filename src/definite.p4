@@ -98,7 +98,13 @@ header controller_reply_t{
 }
 
 struct metadata {
-	bit<1> use_ecmp;
+    bit<14> ecmp_select;
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<1> use_ecmp;
+    bit<32> flowlet_hash;
+    bit<16> flowlet_index;
+    bit<16> ecmp_direction;
 }
 
 
@@ -177,9 +183,104 @@ control MyIngress(inout headers hdr,
 	register<bit<48>>(MAX_PORTS) bytes_per_port;
 	register<bit<48>>(MAX_PORTS) packets_per_port;
 
-	action drop(){
-		mark_to_drop(standard_metadata);
-	}
+    register<bit<32>>(MAX_FLOWLETS) reg_hash;
+    register<bit<48>>(MAX_FLOWLETS) reg_timestamp;
+    register<bit<9>>(MAX_FLOWLETS) reg_port;
+    register<bit<16>>(MAX_FLOWLETS) reg_collisions;
+
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    action hash_flowlet(out bit<32> i){
+        hash(meta.flowlet_hash,
+            HashAlgorithm.crc32,
+            (bit<32>)0 ,
+            {hdr.ipv4.srcAddr,
+             hdr.ipv4.dstAddr,
+             meta.srcPort,
+             meta.dstPort,
+             hdr.ipv4.protocol },
+            (bit<32>)MAX_HASH);
+
+        hash(i,
+            HashAlgorithm.crc16,
+            (bit<16>)0 ,
+            {hdr.ipv4.srcAddr,
+             hdr.ipv4.dstAddr,
+             meta.srcPort,
+             meta.dstPort,
+             hdr.ipv4.protocol },
+            (bit<16>)MAX_FLOWLETS);
+    }
+
+    action check_flowlet(bit<32> i){
+        bit<32> flowlet_hash;
+        bit<48> timestamp;
+        bit<9> port;
+        bit<16> collisions;
+
+        reg_hash.read(flowlet_hash, i);
+        reg_timestamp.read(timestamp, i);
+        reg_port.read(port, i);
+        reg_collisions.read(collisions, i);
+
+        if (timestamp + FLOWLET_TIMEOUT > standard_metadata.ingress_global_timestamp && timestamp != 0){
+            //Flowlet is not expired, check if match
+            if (flowlet_hash == meta.flowlet_hash){
+                //match
+                //reg_timestamp.write(i, standard_metadata.ingress_global_timestamp);
+                standard_metadata.egress_spec = port;
+            }else{
+                //collisions
+                //reg_timestamp.write(i, standard_metadata.ingress_global_timestamp);
+                //check for overflow
+                if (collisions + 1 != 0){
+                    collisions = collisions + 1;
+                }
+                standard_metadata.egress_spec = port;
+            }
+        }else{
+            //Flowlet is expired, overwrite
+            flowlet_hash = meta.flowlet_hash;
+            port = standard_metadata.egress_spec;
+            //reg_timestamp.write(i, standard_metadata.ingress_global_timestamp);
+            collisions = 0;
+        }
+
+        reg_hash.write(i, flowlet_hash);
+        reg_port.write(i, port);
+        reg_timestamp.write(i, standard_metadata.ingress_global_timestamp);
+        reg_collisions.write(i, collisions);
+
+        //hdr.ipv4.ttl = hdr.ipv4.ttl - (bit<8>)port; //debugging purposes
+    }
+
+
+    action set_ecmp_select(bit<16> ecmp_direction, bit<32> ecmp_count) {
+        meta.ecmp_direction = ecmp_direction;
+        bit<16> random_num = 0;
+        random(random_num, (bit<16>)0, (bit<16>)32767);
+        hash(meta.ecmp_select,
+            HashAlgorithm.crc16,
+            (bit<16>)0 ,
+            { hdr.ipv4.srcAddr,
+              hdr.ipv4.dstAddr,
+              hdr.ipv4.protocol,
+              meta.srcPort,
+              meta.dstPort,
+              random_num },
+            ecmp_count);
+        meta.use_ecmp = 1;
+    }
+
+    action set_nhop(bit<48> nhop_dmac, bit<9> port) {
+    	hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = nhop_dmac;
+        standard_metadata.egress_spec = port;
+        //hdr.ipv4.ttl = hdr.ipv4.ttl - (bit<8>)port; //debugging purposes
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
 
 	action ipv4_forward(bit<48> nhop_dmac, bit<9> port) {
 		hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
@@ -196,9 +297,21 @@ control MyIngress(inout headers hdr,
         actions = {
             drop;
             ipv4_forward;
-            //set_ecmp_select;
+            set_ecmp_select;
         }
         size = 128; //increase this later
+    }
+
+    table ecmp_nhop {
+        key = {
+            meta.ecmp_direction: exact;
+            meta.ecmp_select: exact;
+        }
+        actions = {
+            drop;
+            set_nhop;
+        }
+        size = 20;
     }
 
 	action pull_byte_registers(bit<32> i){
@@ -345,9 +458,22 @@ control MyIngress(inout headers hdr,
 
 			hdr.controller_request.setInvalid();
 		}
-		else if (hdr.ipv4.isValid()){
-			//forwarding
-			ecmp_group.apply();
+		else if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 0) {
+            if (hdr.tcp.isValid()){
+                meta.srcPort = hdr.tcp.srcPort;
+                meta.dstPort = hdr.tcp.dstPort;
+            }else if (hdr.udp.isValid()){
+                meta.srcPort = hdr.udp.srcPort;
+                meta.dstPort = hdr.udp.dstPort;
+            }
+
+            bit<32> i;
+            hash_flowlet(i);
+            ecmp_group.apply();
+            if (meta.use_ecmp == 1){
+                ecmp_nhop.apply();
+                check_flowlet(i);
+            }
 
 			increment_byte_register((bit<32>) standard_metadata.egress_spec);
 			increment_packet_register((bit<32>) standard_metadata.egress_spec);

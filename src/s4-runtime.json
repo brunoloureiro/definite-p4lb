@@ -12,11 +12,11 @@
     {
       "table": "MyIngress.ecmp_group",
       "match": {
-        "hdr.ipv4.dstAddr": ["10.0.1.1", 32]
+        "hdr.ipv4.dstAddr": ["10.0.1.0", 24]
       },
       "action_name": "MyIngress.ipv4_forward",
       "action_params": {
-        "nhop_dmac": "08:00:00:00:01:01",
+        "nhop_dmac": "08:00:00:01:03:00",
         "port" : 2
       }
     },
@@ -25,10 +25,10 @@
       "match": {
         "hdr.ipv4.dstAddr": ["10.0.2.0", 24]
       },
-      "action_name": "MyIngress.set_ecmp_select",
+      "action_name": "MyIngress.ipv4_forward",
       "action_params": {
-        "ecmp_direction": 0,
-        "ecmp_count": 2
+        "nhop_dmac": "08:00:00:02:03:00",
+        "port" : 3
       }
     },
     {
@@ -36,10 +36,10 @@
       "match": {
         "hdr.ipv4.dstAddr": ["10.0.3.0", 24]
       },
-      "action_name": "MyIngress.ipv4_forward",
+      "action_name": "MyIngress.set_ecmp_select",
       "action_params": {
-        "nhop_dmac": "08:00:00:03:03:00",
-        "port" : 3
+        "ecmp_direction": 0,
+        "ecmp_count": 2
       }
     },
     {
@@ -50,8 +50,8 @@
       },
       "action_name": "MyIngress.set_nhop",
       "action_params": {
-        "nhop_dmac": "00:00:00:03:03:00",
-        "port" : 3
+        "nhop_dmac": "00:00:00:01:04:00",
+        "port" : 2
       }
     },
     {
@@ -62,8 +62,8 @@
       },
       "action_name": "MyIngress.set_nhop",
       "action_params": {
-        "nhop_dmac": "00:00:00:04:02:00",
-        "port" : 4
+        "nhop_dmac": "00:00:00:02:04:00",
+        "port" : 3
       }
     }
   ]

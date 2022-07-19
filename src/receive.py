@@ -9,7 +9,13 @@ from scapy.all import (
     IPOption,
     ShortField,
     get_if_list,
-    sniff
+    sniff,
+    IP,
+    TCP,
+    Ether,
+    get_if_hwaddr,
+    get_if_addr,
+    get_if_list
 )
 from scapy.layers.inet import _IPOption_HDR
 
@@ -43,15 +49,26 @@ def handle_pkt(pkt):
     pkt.show2()
 #    hexdump(pkt)
     sys.stdout.flush()
+    #print("IP in packet:" + str(IP in pkt))
+    #print("Src IP from packet: {}\nIP from hwaddr(iface): {}".format(pkt[IP].src, get_if_addr(iface)))
 
 
-def main():
-    ifaces = [i for i in os.listdir('/sys/class/net/') if 'eth' in i]
-    iface = ifaces[0]
+def filter_sent_pkts(pkt):
+    if IP in pkt and pkt[IP].src == get_if_addr(iface):
+        return False
+    else:
+        return True
+
+ifaces = [i for i in os.listdir('/sys/class/net/') if 'eth' in i]
+iface = ifaces[0]
+
+def main():    
+    
     print("sniffing on %s" % iface)
     sys.stdout.flush()
-    sniff(filter="tcp", iface = iface,
+    sniff(lfilter=filter_sent_pkts, iface = iface,
           prn = lambda x: handle_pkt(x))
+
 
 if __name__ == '__main__':
     main()
